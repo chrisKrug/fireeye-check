@@ -87,20 +87,20 @@ if [[ $_uname_results == *"el7"* ]]; then
 			else
 				echo "Version is not operating as expected"
 				echo "Remomving install"
-				remove_fireeye
+				#remove_fireeye
 				echo "Installing target version"
-				install_fireeye
+				#install_fireeye
 			fi
 		else
 			echo "Not target version"
 			echo "Removing install"
-			remove_fireeye
+			#remove_fireeye
 			echo "Installing target version"
-			install_fireeye
+			#install_fireeye
 		fi
 	else
 		echo "Fireeye not installed"
 		echo "Installing target version"
-		install_fireeye		
+		#install_fireeye		
 	fi
 fi
