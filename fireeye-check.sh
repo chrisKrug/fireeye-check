@@ -1,163 +1,102 @@
 #!/bin/sh
 
-targetVersion="v32.30.0"
+_target_version="v32.30.0"
 
-#Ncat: Network is unreachable.
+check_hostname () {
+	_host="$(echo $HOSTNAME)"
+	echo $_host
+}
 
-echo " "
-echo $HOSTNAME
-if [ -n "$(uname -a | grep el7)" ]; then
-        OS_RELEASE_VERS="7"
-	if [[ -f "/opt/fireeye/bin/xagt" ]]; then
-	        VERSION="$(/opt/fireeye/bin/xagt -v)"
-		echo $VERSION
-        	if [ $targetVersion == $VERSION ]; then
-				
-                	activeStatus="$(systemctl is-active xagt)"
-                	enabledStatus="$(systemctl is-enabled xagt)"
-                	failedStatus="$(systemctl is-failed xagt)"
-                	if [ $activeStatus == "active" ]; then
-                	        echo $activeStatus
-                	        if [ $enabledStatus == "enabled" ]; then
-                	                echo "enabled"
-                	                connectStatus="$(nc -z wva-fe-hxd00.csp.noaa.gov 443 | grep connected)"
-                	                if [[ $connectStatus == *"Network is unreachable"* ]]; then 
-						echo "connection error. Do something"
-					else
-						echo "Connection good"
-					fi
-                	        fi
-                	elif [ $failedStatus == "failed" ]; then
-				echo "failed launch"
-				echo "Restarting services"
-                	        stat /krug
-			else
-				echo $activeStatus
-				echo "Restarting service"
-				systemctl restart xagt
-				previousPid=$!
-                	        wait $previousPid
-				activeStatus="$(systemctl is-active xagt)"
-				if [ $activeStatus == "active" ]; then
-					echo "active"
+check_os_version () {
+	_uname_results="$(uname -a)"
+	echo $_uname_results
+}
+
+check_if_active () {
+	_active_status="$(systemctl is-active xagt)"
+	echo $_active_status
+}
+
+check_if_enabled () {
+	_enabled_status="$(systemctl is-enabled xagt)"
+	echo $_enabled_status
+}
+
+check_if_failed () {
+	_failed_status="$(systemctl is-failed xagt)"
+	echo $_failed_status
+}
+
+check_fireeye_connection () {
+	_connect_status="$(nc -z wva-fe-hxd00.csp.noaa.gov 443 | grep connected)"
+	echo $_connecttion_status
+}
+
+install_fireeye () {
+	yum -y install xagt --nogpgcheck
+	_previous_pid=$!
+	wait $_previous_pid
+	echo "Configuring client"
+	/opt/fireeye/bin/xagt -i /repos/localrepofiles/xagt-32/agent_config.json
+	_previous_pid=$!
+	wait $_previous_pid
+	chmod +r /usr/lib/systemd/system/xagt.service
+	chmod -x /usr/lib/systemd/system/xagt.service
+	systemctl enable xagt
+	_previous_pid=$!
+	wait $_previous_pid
+	systemctl restart xagt
+	_previous_pid=$!
+	wait $_previous_pid
+}
+
+remove_fireeye () {
+	echo "Stopping service"
+	systemctl stop xagt
+	_previous_pid=$!
+	wait $_previous_pid
+	fireeyeRpm="$(rpm -qa | grep -i xagt)"
+	echo $fireeyeRpm
+	rpm -e ${fireeyeRpm}
+	_previous_pid=$!
+	wait $_previous_pid
+	echo "rpm removed"
+	echo "Removing client"
+	opt/fireeye/bin/uninstall.sh #yum -y remove xagt
+	_previous_pid=$!
+	wait $_previous_pid
+}
+
+check_hostname
+check_os_version
+
+if [[ $_uname_results == *"el7"* ]]; then
+	if [[ -f "/opt/fireye/bin/xagt" ]]; then
+		_installed_version="$(/opt/fireeye/bin/xagt -v)"
+		if [[ $_target_version == $_installed_version  ]]; then
+			if [[ $_active_status == "active"  ]]; then
+				echo "Version is active"
+				echo "Checking connection status"
+				check_fireeye_connection
+				if [[ $_connection_status == *"Network is unreachable"* ]]; then
+					echo "Connection problem"
+					echo "Identify error"
 				else
-					echo "Stopping service"
-					systemctl stop xagt
-					previousPid=$!
-	                	        wait $previousPid
-					fireeyeRpm="$(rpm -qa | grep -i xagt)"
-					echo $fireeyeRpm
-					rpm -e ${fireeyeRpm}
-					previousPid=$!
-        	                        wait $previousPid
-					echo "rpm removed"				
-					echo "Removing client"
-					opt/fireeye/bin/uninstall.sh #yum -y remove xagt
-					previousPid=$!
-                	                wait $previousPid
-					
-					echo "Installing client"
-                			yum -y install xagt --nogpgcheck
-                			previousPid=$!
-                			wait $previousPid
-                			echo "Configuring client"
-                			/opt/fireeye/bin/xagt -i /repos/localrepofiles/xagt-32/agent_config.json
-                			previousPid=$!
-                			wait $previousPid
-                			chmod +r /usr/lib/systemd/system/xagt.service
-                			chmod -x /usr/lib/systemd/system/xagt.service
-                			systemctl enable xagt
-                			previousPid=$!
-                			wait $previousPid
-                			systemctl restart xagt
-                			previousPid=$!
-                			wait $previousPid
-                			activeStatus="$(systemctl is-active xagt)"
-                			enabledStatus="$(systemctl is-enabled xagt)"
-                			failedStatus="$(systemctl is-failed xagt)"
-                			if [ $activeStatus == "active" ]; then
-              					echo "Installed client is "$activeStatus
-                			else
-                    				echo "Error"
-			                fi
-
-
-					#yum -y install xagt --nogpgcheck
-					#previousPid=$!
-                        	        #wait $previousPid
-					#echo "Configuring client"
-					#/opt/fireeye/bin/xagt -i /repos/localrepofiles/xagt-32/agent_config.json
-					#previousPid=$!
-					#wait $previousPid
-					#chmod +r /usr/lib/systemd/system/xagt.service
-					#chmod -x /usr/lib/systemd/system/xagt.service	
-					#systemctl enable xagt
-					#previousPid=$!
-                                	#wait $previousPid
-			        	#systemctl restart xagt
-					#previousPid=$!
-                        	        #wait $previousPid
-					#activeStatus="$(systemctl is-active xagt)"
-		        	        #enabledStatus="$(systemctl is-enabled xagt)"
-                			#failedStatus="$(systemctl is-failed xagt)"
-					#if [ $activeStatus == "active" ]; then
-					#	echo "Reinstalled client is " $activeStatus
-					#else
-					#	echo "still bad"
-					#fi		
-	
+					echo "Connection good"
 				fi
-                	fi
-        	else
-        	    	echo $VERSION "Wrong version"
-        	        echo "Updating client"
-        	        stat /krug
-        	fi
+			else
+				echo "Version is not operating as expected"
+				echo "Remomving install"
+				echo "Installing target version""
+			fi
+		else
+			echo "Not target version"
+			echo "Removing install"
+			echo "Installing target version"
+		fi
 	else
-		echo "Client not installed"
-		echo "Installing client"
-		yum -y install xagt --nogpgcheck
-		previousPid=$!
-		wait $previousPid
-		echo "Configuring client"
-                /opt/fireeye/bin/xagt -i /repos/localrepofiles/xagt-32/agent_config.json
-                previousPid=$!
-                wait $previousPid
-		chmod +r /usr/lib/systemd/system/xagt.service
-                chmod -x /usr/lib/systemd/system/xagt.service
-                systemctl enable xagt
-                previousPid=$!
-                wait $previousPid
-                systemctl restart xagt
-                previousPid=$!
-                wait $previousPid
-                activeStatus="$(systemctl is-active xagt)"
-                enabledStatus="$(systemctl is-enabled xagt)"
-                failedStatus="$(systemctl is-failed xagt)"
-                if [ $activeStatus == "active" ]; then
-                	echo "Installed client is "$activeStatus
-                else
-                	echo "Error"
-                fi
+		echo "Fireye not installed"
+		echo "Installing target version"
+
 	fi
-elif [ -n "$(uname -a | grep el6)" ]; then
-        OS_RELEASE_VERS="6"
-        VERSION="$(/opt/fireeye/bin/xagt -v)"
-        if [ "v32.30.0" == $VERSION ]; then
-                echo $VERSION "Good"
-        else
-            	echo $VERSION "Bad"
-                stat /krug
-        fi
-elif [ -n "$(uname -a | grep el8)" ]; then
-        OS_RELEASE_VERS="8"
-        VERSION="$(/opt/fireeye/bin/xagt -v)"
-        if [ "v32.30.0" == $VERSION ]; then
-                echo $VERSION "Good"
-        else
-            	echo $VERSION "Bad"
-                stat /krug
-        fi
-else
-    	OS_RELEASE_VERS="0"
-fih
+fi
