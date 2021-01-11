@@ -29,7 +29,7 @@ check_if_failed () {
 
 check_fireeye_connection () {
 	_connect_status="$(nc -z wva-fe-hxd00.csp.noaa.gov 443 | grep connected)"
-	echo $_connecttion_status
+	echo $_connection_status
 }
 
 install_fireeye () {
@@ -71,9 +71,10 @@ check_hostname
 check_os_version
 
 if [[ $_uname_results == *"el7"* ]]; then
-	if [[ -f "/opt/fireye/bin/xagt" ]]; then
+	if [[ -f "/opt/fireeye/bin/xagt" ]]; then
 		_installed_version="$(/opt/fireeye/bin/xagt -v)"
 		if [[ $_target_version == $_installed_version  ]]; then
+			check_if_active
 			if [[ $_active_status == "active"  ]]; then
 				echo "Version is active"
 				echo "Checking connection status"
