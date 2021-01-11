@@ -87,7 +87,7 @@ if [[ $_uname_results == *"el7"* ]]; then
 			else
 				echo "Version is not operating as expected"
 				echo "Remomving install"
-				echo "Installing target version""
+				echo "Installing target version"
 			fi
 		else
 			echo "Not target version"
